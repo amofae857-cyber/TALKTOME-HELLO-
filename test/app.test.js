@@ -7,6 +7,7 @@ const path = require('node:path');
 const appPath = path.join(__dirname, '..', 'server.js');
 const testPort = 34000 + (process.pid % 1000);
 const testBaseUrl = `http://127.0.0.1:${testPort}`;
+const serialTest = { concurrency: false };
 
 function startServer() {
   return new Promise((resolve, reject) => {
@@ -43,7 +44,7 @@ function startServer() {
   });
 }
 
-test('all navigation targets resolve to accessible page sections', () => {
+test('all navigation targets resolve to accessible page sections', serialTest, () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const pageSections = [...html.matchAll(/<section[^>]*id="([^"]+)"/g)].map((match) => match[1]);
   const navigationTargets = [...html.matchAll(/showPage\('([^']+)'\)/g)].map((match) => match[1]);
@@ -55,7 +56,7 @@ test('all navigation targets resolve to accessible page sections', () => {
   }
 });
 
-test('server responds on health endpoint', async () => {
+test('server responds on health endpoint', serialTest, async () => {
   const child = await startServer();
   try {
     const response = await fetch(`${testBaseUrl}/api/health`);
@@ -68,7 +69,7 @@ test('server responds on health endpoint', async () => {
   }
 });
 
-test('chat endpoint accepts a session and stores a reply', async () => {
+test('chat endpoint accepts a session and stores a reply', serialTest, async () => {
   const child = await startServer();
   try {
     const sessionResponse = await fetch(`${testBaseUrl}/api/session`, {
@@ -97,7 +98,7 @@ test('chat endpoint accepts a session and stores a reply', async () => {
   }
 });
 
-test('signup and export endpoints work for account flows', async () => {
+test('signup and export endpoints work for account flows', serialTest, async () => {
   const child = await startServer();
   try {
     const signupResponse = await fetch(`${testBaseUrl}/api/signup`, {
@@ -157,7 +158,7 @@ test('signup and export endpoints work for account flows', async () => {
   }
 });
 
-test('admin analytics requires server-side authentication', async () => {
+test('admin analytics requires server-side authentication', serialTest, async () => {
   const child = await startServer();
   try {
     const publicResponse = await fetch(`${testBaseUrl}/api/analytics`);
