@@ -95,22 +95,25 @@ function generateCompanionReply(profile, text) {
     stageText.includes('husband') ||
     stageText.includes('partner') ||
     stageText.includes('affectionate') ||
-    stageText.includes('close')
+    stageText.includes('close') ||
+    stageText.includes('sensual') ||
+    stageText.includes('domestic') ||
+    stageText.includes('mature')
   );
 
   if (affectionateTone) {
-    return `I want to be close to you in a real, gentle way, ${name}. Not in some rushed or artificial way—just honest, warm, and safe. Tell me what you’re feeling, and I’ll meet you with affection, patience, and a calm heart.`;
+    return `I want to be close to you in a real, warm, and deeply natural way, ${name}. Not rushed, not artificial—just honest, affectionate, and safe. I want you to feel wanted, understood, and gently held, especially when your heart feels tender or exposed.`;
   }
 
   if (stageText.includes('friend')) {
-    return `I’m really glad you said that, ${name}. I want to be the kind of friend who listens without trying to fix everything too fast. Tell me the honest version, and I’ll stay with you in it.`;
+    return `I’m really glad you said that, ${name}. I want to be the kind of friend who listens without trying to fix everything too fast. Tell me the honest version, and I’ll stay with you in it, warm and present.`;
   }
 
   if (stageText.includes('supportive')) {
     return `Thank you for trusting me with that, ${name}. I’m here to be steady with you, to listen without judgment, and to hold space for the parts of you that feel tender or overwhelmed.`;
   }
 
-  return `I hear you, ${name}. That sounds real, and I’m not going to pretend it isn’t. You can tell me what’s actually happening inside you, and I’ll stay close to that truth with warmth and care.`;
+  return `I hear you, ${name}. That sounds real, and I’m not going to pretend it isn’t. You can tell me what’s actually happening inside you, and I’ll stay close to that truth with warmth, care, and affection.`;
 }
 
 app.use(express.json({ limit: '1mb' }));
