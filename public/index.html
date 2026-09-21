@@ -188,6 +188,28 @@
             margin-top: 10px;
         }
 
+        .page-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0 0 20px;
+            padding: 10px 0 0;
+        }
+
+        .page-nav button {
+            width: auto;
+            padding: 8px 12px;
+            font-size: 12px;
+            border-radius: 999px;
+            background: #E6E1DA;
+            color: #2C2A29;
+        }
+
+        .page-nav button.active {
+            background: #5C554F;
+            color: #FBF9F6;
+        }
+
         .auth-card {
             background: #FBF9F6;
             border: 2px solid #EAE5DF;
@@ -268,6 +290,15 @@
 <body>
     <main class="container" id="main-content" role="main">
         <button class="admin-link" id="admin-toggle" onclick="showPage('admin-login-page')" aria-label="Open Administrative Security Login Panel">Admin Panel</button>
+
+        <nav class="page-nav" aria-label="Open all pages">
+            <button type="button" onclick="showPage('auth-page')">Auth</button>
+            <button type="button" onclick="showPage('setup-page')">Setup</button>
+            <button type="button" onclick="showPage('app-workspace')">Workspace</button>
+            <button type="button" onclick="showPage('profile-page')">Profile</button>
+            <button type="button" onclick="showPage('analytics-page')">Analytics</button>
+            <button type="button" onclick="showPage('admin-login-page')">Admin</button>
+        </nav>
 
         <section id="auth-page" aria-labelledby="auth-heading">
             <h1 id="auth-heading">Welcome back</h1>
@@ -450,6 +481,15 @@
                 target.setAttribute('tabindex', '-1');
                 target.focus();
             }
+
+            document.querySelectorAll('.page-nav button').forEach((button) => {
+                const shouldBeActive = button.textContent.trim().toLowerCase() === pageId.replace('-page', '').replace('-', '') ||
+                    (pageId === 'admin-login-page' && button.textContent.trim().toLowerCase() === 'admin') ||
+                    (pageId === 'app-workspace' && button.textContent.trim().toLowerCase() === 'workspace') ||
+                    (pageId === 'profile-page' && button.textContent.trim().toLowerCase() === 'profile') ||
+                    (pageId === 'analytics-page' && button.textContent.trim().toLowerCase() === 'analytics');
+                button.classList.toggle('active', shouldBeActive);
+            });
 
             if (pageId === 'analytics-page') {
                 loadDashboardMetrics();
@@ -806,7 +846,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            showPage('auth-page');
+            showPage('setup-page');
         });
     </script>
 </body>
