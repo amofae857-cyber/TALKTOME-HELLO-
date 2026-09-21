@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const sqlite3 = require('sqlite3').verbose();
@@ -8,11 +9,18 @@ const app = express();
 const DEFAULT_PORT = 3000;
 const PORT = Number(process.env.PORT) || DEFAULT_PORT;
 const projectRoot = __dirname;
-const dataDir = path.join(projectRoot, 'data');
+const isVercelRuntime = Boolean(process.env.VERCEL);
+const dataDir = isVercelRuntime
+  ? path.join(os.tmpdir(), 'talktome-hello-data')
+  : path.join(projectRoot, 'data');
 const dbPath = path.join(dataDir, 'companion.db');
 const authTokens = new Map();
 
 fs.mkdirSync(dataDir, { recursive: true });
+
+if (isVercelRuntime) {
+  console.log(`Using writable temp directory for SQLite: ${dataDir}`);
+}
 
 if (process.env.RESET_DB === '1' || process.env.NODE_ENV === 'test') {
   try {
