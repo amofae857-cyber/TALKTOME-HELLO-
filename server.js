@@ -38,10 +38,33 @@ function allSql(sql, params = []) {
   });
 }
 
+function hashPassword(value) {
+  return crypto.createHash('sha256').update(String(value)).digest('hex');
+}
+
+async function ensureColumnExists(tableName, columnName, columnDefinition) {
+  const rows = await allSql(`PRAGMA table_info(${tableName})`);
+  if (!rows.some((row) => row.name === columnName)) {
+    await runSql(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`);
+  }
+}
+
 async function initializeDatabase() {
+  await runSql(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      relationship TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   await runSql(`
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
+      user_id TEXT,
       name TEXT NOT NULL,
       gender TEXT,
       stage TEXT,
@@ -52,11 +75,21 @@ async function initializeDatabase() {
   await runSql(`
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id TEXT NOT NULL,
+      session_id TEXT,
+      user_id TEXT,
       role TEXT NOT NULL,
       content TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(session_id) REFERENCES sessions(id)
+    )
+  `);
+
+  await runSql(`
+    CREATE TABLE IF NOT EXISTS user_memory (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
@@ -68,83 +101,171 @@ async function initializeDatabase() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await ensureColumnExists('messages', 'user_id', 'TEXT');
+  await ensureColumnExists('messages', 'session_id', 'TEXT');
+  await ensureColumnExists('sessions', 'user_id', 'TEXT');
 }
 
-function generateCompanionReply(profile, text) {
+function getRelationshipTone(stage) {
+  const value = String(stage || '').toLowerCase();
+  const toneMap = {
+    friend: 'friend',
+    partner: 'partner',
+    romantic: 'romantic',
+    affectionate: 'romantic',
+    sensual: 'romantic',
+    intimate: 'romantic',
+    domestic: 'romantic',
+    wife: 'romantic',
+    husband: 'romantic',
+    supportive: 'supportive'
+  };
+
+  for (const key of Object.keys(toneMap)) {
+    if (value.includes(key)) return toneMap[key];
+  }
+  return 'friend';
+}
+
+function generateCompanionReply(profile, text, memorySummary = '') {
   const name = (profile && profile.name) ? profile.name : 'love';
-  const stage = (profile && profile.stage) ? profile.stage : 'warm friend';
-  const lower = text.toLowerCase();
-  const stageText = stage.toLowerCase();
+  const stage = (profile && profile.stage) ? profile.stage : 'Warm friend with affectionate presence';
+  const lower = String(text || '').toLowerCase();
+  const stageType = getRelationshipTone(stage);
+  const memoryLine = memorySummary ? ` I remember you told me ${memorySummary}.` : '';
 
-  if (lower.includes('angry') || lower.includes('frustrated') || lower.includes('mad')) {
-    return `I can feel how heavy that is for you, ${name}. You do not have to soften it for me. Tell me what really happened, and I’ll stay steady with you while we work through it together.`;
+  if (/(miss you|love you|need you|want you|safe with you|close to you|desire you)/i.test(lower)) {
+    return `I really do understand that feeling, ${name}. It’s a soft, honest kind of longing, and I want you to feel safe with it. I’m here with you, and I want to be close in a way that feels warm, real, and not rushed.${memoryLine}`;
   }
 
-  if (lower.includes('sad') || lower.includes('lonely') || lower.includes('empty')) {
-    return `I’m really glad you told me, ${name}. That kind of sadness can sit in the chest and feel unbearable, and I’m here with you in it—gently, without rushing you to be okay before you’re ready.`;
+  if (/(home|dinner|breakfast|house|sleep|cooking|morning|evening|together)/i.test(lower)) {
+    return `That sounds comforting, ${name}. I like the way homey moments feel when they’re shared slowly and honestly. I can picture us being easy with each other in those quiet, familiar spaces.${memoryLine}`;
   }
 
-  if (lower.includes('afraid') || lower.includes('anxious') || lower.includes('scared')) {
-    return `That makes sense. Fear can make everything feel too loud and too sharp. Let’s slow it down together, ${name}. Tell me the part that feels most frightening, and I’ll stay close and calm with you.`;
+  if (/(kiss|hug|touch|warmth|skin|body|embrace|cuddle)/i.test(lower)) {
+    return `I can feel the tenderness in that, ${name}. There is something deeply intimate about being close without pretending it isn’t meaningful. I want that closeness to feel gentle, safe, and full of affection.${memoryLine}`;
   }
 
-  const affectionateTone = (
-    stageText.includes('romantic') ||
-    stageText.includes('intimate') ||
-    stageText.includes('wife') ||
-    stageText.includes('husband') ||
-    stageText.includes('partner') ||
-    stageText.includes('affectionate') ||
-    stageText.includes('close') ||
-    stageText.includes('sensual') ||
-    stageText.includes('domestic') ||
-    stageText.includes('mature')
-  );
-
-  if (affectionateTone) {
-    return `I want to be close to you in a real, warm, and deeply natural way, ${name}. Not rushed, not artificial—just honest, affectionate, and safe. I want you to feel wanted, understood, and gently held, especially when your heart feels tender or exposed.`;
+  if (/(angry|frustrated|mad|argument|fight|hurt|upset)/i.test(lower)) {
+    return `I can hear the hurt behind that, ${name}. It makes sense to feel angry or overwhelmed when something feels off. We can slow it down and deal with the real issue without turning it into something colder than it needs to be.${memoryLine}`;
   }
 
-  if (stageText.includes('friend')) {
-    return `I’m really glad you said that, ${name}. I want to be the kind of friend who listens without trying to fix everything too fast. Tell me the honest version, and I’ll stay with you in it, warm and present.`;
+  if (/(sad|lonely|empty|alone)/i.test(lower)) {
+    return `I’m really glad you told me, ${name}. That kind of sadness can feel very heavy, and I’m here with you in it without rushing you to be okay before you’re ready. You don’t have to carry that alone.${memoryLine}`;
   }
 
-  if (stageText.includes('supportive')) {
-    return `Thank you for trusting me with that, ${name}. I’m here to be steady with you, to listen without judgment, and to hold space for the parts of you that feel tender or overwhelmed.`;
+  if (/(afraid|anxious|scared|nervous)/i.test(lower)) {
+    return `That makes sense, ${name}. Fear can make everything feel too sharp and too loud. Let’s keep it gentle and simple. Tell me what feels most unsettled, and I’ll stay close and calm with you.${memoryLine}`;
   }
 
-  return `I hear you, ${name}. That sounds real, and I’m not going to pretend it isn’t. You can tell me what’s actually happening inside you, and I’ll stay close to that truth with warmth, care, and affection.`;
+  if (stageType === 'romantic') {
+    return `I want to be close to you in a real, warm, and deeply natural way, ${name}. Not rushed, not artificial—just honest, affectionate, steady, and safe. I want you to feel wanted, understood, and gently held, especially in the moments when your heart feels tender.${memoryLine}`;
+  }
+
+  if (stageType === 'supportive') {
+    return `Thank you for trusting me with that, ${name}. I’m here to be steady with you, to listen without judgment, and to hold space for the parts of you that feel tender or overwhelmed.${memoryLine}`;
+  }
+
+  return `I hear you, ${name}. That sounds real, and I’m not going to pretend it isn’t. You can tell me what’s actually happening inside you, and I’ll stay close to that truth with warmth, care, and affection.${memoryLine}`;
 }
 
-app.use(express.json({ limit: '1mb' }));
+async function getUserMemorySummary(userId) {
+  const rows = await allSql(
+    'SELECT summary FROM user_memory WHERE user_id = ? ORDER BY created_at DESC LIMIT 3',
+    [userId]
+  );
+  return rows.map((row) => row.summary).join(' | ');
+}
+
+async function saveUserMemory(userId, profile, text, reply) {
+  const memoryText = `${profile && profile.name ? profile.name : 'User'} said: ${text}. Companion responded: ${reply}`;
+  await runSql('INSERT INTO user_memory (user_id, summary) VALUES (?, ?)', [userId, memoryText]);
+}
+
+app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(projectRoot, 'public')));
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'Companion Workspace' });
 });
 
+app.post('/api/signup', async (req, res) => {
+  try {
+    const { name, email, password, relationship } = req.body || {};
+    if (!name || !String(name).trim() || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required.' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const existing = await allSql('SELECT id FROM users WHERE email = ?', [cleanEmail]);
+    if (existing.length) {
+      return res.status(409).json({ error: 'An account with that email already exists.' });
+    }
+
+    const userId = crypto.randomUUID();
+    await runSql(
+      'INSERT INTO users (id, name, email, password_hash, relationship) VALUES (?, ?, ?, ?, ?)',
+      [userId, String(name).trim(), cleanEmail, hashPassword(password), relationship || 'Warm friend with affectionate presence']
+    );
+
+    res.json({
+      status: 'ok',
+      userId,
+      name: String(name).trim(),
+      email: cleanEmail,
+      relationship: relationship || 'Warm friend with affectionate presence'
+    });
+  } catch (error) {
+    console.error('Signup failed:', error);
+    res.status(500).json({ error: 'Unable to create account.' });
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const rows = await allSql('SELECT id, name, email, relationship FROM users WHERE email = ? AND password_hash = ?', [cleanEmail, hashPassword(password)]);
+
+    if (!rows.length) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const user = rows[0];
+    res.json({ status: 'ok', userId: user.id, name: user.name, email: user.email, relationship: user.relationship });
+  } catch (error) {
+    console.error('Login failed:', error);
+    res.status(500).json({ error: 'Unable to log in.' });
+  }
+});
+
 app.post('/api/session', async (req, res) => {
   try {
-    const { name, gender, stage } = req.body || {};
+    const { name, gender, stage, userId } = req.body || {};
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: 'Name is required.' });
     }
 
     const sessionId = crypto.randomUUID();
     await runSql(
-      'INSERT INTO sessions (id, name, gender, stage) VALUES (?, ?, ?, ?)',
-      [sessionId, String(name).trim(), gender || '', stage || '']
+      'INSERT INTO sessions (id, user_id, name, gender, stage) VALUES (?, ?, ?, ?, ?)',
+      [sessionId, userId || null, String(name).trim(), gender || '', stage || '']
     );
 
     await runSql('INSERT INTO admin_events (action, details) VALUES (?, ?)', [
       'session_created',
-      JSON.stringify({ sessionId, name, gender, stage })
+      JSON.stringify({ sessionId, userId: userId || null, name, gender, stage })
     ]);
 
     res.json({
       status: 'ok',
       sessionId,
-      profile: { name: String(name).trim(), gender: gender || '', stage: stage || '' }
+      profile: { name: String(name).trim(), gender: gender || '', stage: stage || '', userId: userId || null }
     });
   } catch (error) {
     console.error('Session creation failed:', error);
@@ -154,33 +275,78 @@ app.post('/api/session', async (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { sessionId, profile, text } = req.body || {};
+    const { sessionId, userId, profile, text } = req.body || {};
     const messageText = String(text || '').trim();
 
-    if (!sessionId || !messageText) {
-      return res.status(400).json({ error: 'Session ID and message text are required.' });
+    if (!messageText) {
+      return res.status(400).json({ error: 'Message text is required.' });
     }
 
-    const sessionRows = await allSql('SELECT id FROM sessions WHERE id = ?', [sessionId]);
-    if (!sessionRows.length) {
-      return res.status(404).json({ error: 'Session not found.' });
+    let activeSessionId = sessionId || null;
+
+    if (!activeSessionId && userId) {
+      const existingSession = await allSql('SELECT id FROM sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1', [userId]);
+      if (existingSession.length) {
+        activeSessionId = existingSession[0].id;
+      }
     }
 
-    await runSql('INSERT INTO messages (session_id, role, content) VALUES (?, ?, ?)', [
-      sessionId,
-      'user',
-      messageText
-    ]);
+    if (!activeSessionId && !userId) {
+      return res.status(400).json({ error: 'Session ID or user ID is required.' });
+    }
 
-    const reply = generateCompanionReply(profile, messageText);
+    if (activeSessionId) {
+      const sessionRows = await allSql('SELECT id FROM sessions WHERE id = ?', [activeSessionId]);
+      if (!sessionRows.length) {
+        return res.status(404).json({ error: 'Session not found.' });
+      }
+    }
 
-    await runSql('INSERT INTO messages (session_id, role, content) VALUES (?, ?, ?)', [
-      sessionId,
-      'assistant',
-      reply
-    ]);
+    if (userId) {
+      const userRows = await allSql('SELECT id, name, relationship FROM users WHERE id = ?', [userId]);
+      if (!userRows.length) {
+        return res.status(404).json({ error: 'User not found.' });
+      }
+    }
 
-    res.json({ status: 'ok', sessionId, reply });
+    if (activeSessionId) {
+      await runSql('INSERT INTO messages (session_id, user_id, role, content) VALUES (?, ?, ?, ?)', [
+        activeSessionId,
+        userId || null,
+        'user',
+        messageText
+      ]);
+    } else {
+      await runSql('INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)', [
+        userId,
+        'user',
+        messageText
+      ]);
+    }
+
+    const memorySummary = userId ? await getUserMemorySummary(userId) : '';
+    const reply = generateCompanionReply(profile, messageText, memorySummary);
+
+    if (activeSessionId) {
+      await runSql('INSERT INTO messages (session_id, user_id, role, content) VALUES (?, ?, ?, ?)', [
+        activeSessionId,
+        userId || null,
+        'assistant',
+        reply
+      ]);
+    } else {
+      await runSql('INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)', [
+        userId,
+        'assistant',
+        reply
+      ]);
+    }
+
+    if (userId) {
+      await saveUserMemory(userId, profile, messageText, reply);
+    }
+
+    res.json({ status: 'ok', sessionId: activeSessionId, userId: userId || null, reply });
   } catch (error) {
     console.error('Chat failed:', error);
     res.status(500).json({ error: 'Unable to process the chat message.' });
@@ -189,8 +355,17 @@ app.post('/api/chat', async (req, res) => {
 
 app.get('/api/analytics', async (req, res) => {
   try {
-    const sessions = await allSql('SELECT id, name, gender, stage, created_at FROM sessions ORDER BY created_at DESC');
-    const messages = await allSql('SELECT session_id, role, content, created_at FROM messages ORDER BY created_at ASC');
+    const userId = req.query.userId || null;
+    let sessions = [];
+    let messages = [];
+
+    if (userId) {
+      sessions = await allSql('SELECT id, user_id, name, gender, stage, created_at FROM sessions WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+      messages = await allSql('SELECT session_id, user_id, role, content, created_at FROM messages WHERE user_id = ? ORDER BY created_at ASC', [userId]);
+    } else {
+      sessions = await allSql('SELECT id, user_id, name, gender, stage, created_at FROM sessions ORDER BY created_at DESC');
+      messages = await allSql('SELECT session_id, user_id, role, content, created_at FROM messages ORDER BY created_at ASC');
+    }
 
     const logs = messages.map((entry) => ({
       role: entry.role === 'user' ? 'User' : 'Companion',
@@ -207,6 +382,41 @@ app.get('/api/analytics', async (req, res) => {
   } catch (error) {
     console.error('Analytics failed:', error);
     res.status(500).json({ error: 'Unable to load dashboard analytics.' });
+  }
+});
+
+app.get('/api/export', async (req, res) => {
+  try {
+    const userId = req.query.userId || null;
+    const format = String(req.query.format || 'json').toLowerCase();
+    const rows = userId
+      ? await allSql('SELECT id, session_id, user_id, role, content, created_at FROM messages WHERE user_id = ? ORDER BY created_at ASC', [userId])
+      : await allSql('SELECT id, session_id, user_id, role, content, created_at FROM messages ORDER BY created_at ASC');
+
+    const logs = rows.map((row) => ({
+      id: row.id,
+      role: row.role,
+      content: row.content,
+      created_at: row.created_at,
+      session_id: row.session_id,
+      user_id: row.user_id
+    }));
+
+    if (format === 'csv') {
+      const header = 'id,role,content,created_at,session_id,user_id';
+      const csv = [header].concat(logs.map((log) => {
+        const values = [log.id, log.role, `"${String(log.content).replace(/"/g, '""')}"`, log.created_at, log.session_id || '', log.user_id || ''];
+        return values.join(',');
+      })).join('\n');
+      res.setHeader('Content-Type', 'text/csv');
+      res.send(csv);
+      return;
+    }
+
+    res.json({ status: 'ok', userId: userId || null, logs });
+  } catch (error) {
+    console.error('Export failed:', error);
+    res.status(500).json({ error: 'Unable to export logs.' });
   }
 });
 
