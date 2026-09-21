@@ -181,6 +181,63 @@
             color: #FBF9F6;
         }
 
+        .auth-shell {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .auth-card {
+            background: #FBF9F6;
+            border: 2px solid #EAE5DF;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .profile-tile {
+            background: #FBF9F6;
+            border: 2px solid #EAE5DF;
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .memory-timeline {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .memory-item {
+            background: #FFFDFB;
+            border: 1px solid #EAE5DF;
+            border-left: 4px solid #A36B5E;
+            border-radius: 8px;
+            padding: 12px 14px;
+            line-height: 1.5;
+        }
+
+        .export-row {
+            display: flex;
+            gap: 10px;
+            margin: 16px 0 20px;
+        }
+
+        .export-row button {
+            width: auto;
+            flex: 1;
+        }
+
         .sr-only {
             position: absolute;
             width: 1px;
@@ -203,7 +260,48 @@
     <main class="container" id="main-content" role="main">
         <button class="admin-link" id="admin-toggle" onclick="showPage('admin-login-page')" aria-label="Open Administrative Security Login Panel">Admin Panel</button>
 
-        <section id="setup-page" aria-labelledby="setup-heading">
+        <section id="auth-page" aria-labelledby="auth-heading">
+            <h1 id="auth-heading">Welcome back</h1>
+            <p class="subtitle">A safe place to be honest, close, and gently understood.</p>
+            <div class="auth-shell">
+                <div class="auth-card">
+                    <h3>Log in</h3>
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="you@example.com">
+
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Your password">
+
+                    <button onclick="loginAccount()">Log in</button>
+                </div>
+                <div class="auth-card">
+                    <h3>Create account</h3>
+                    <label for="signup-name">Name</label>
+                    <input type="text" id="signup-name" placeholder="Your name">
+
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" placeholder="you@example.com">
+
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="Create a password">
+
+                    <label for="signup-relationship">Relationship style</label>
+                    <select id="signup-relationship">
+                        <option>Warm friend with affectionate presence</option>
+                        <option>Gentle supportive partner</option>
+                        <option>Romantic companion with deeper emotional closeness</option>
+                        <option>Intimate, mature, real-life partner energy</option>
+                        <option>Sensual and emotionally rich connection</option>
+                        <option>Deeply affectionate and domestic closeness</option>
+                        <option>Realistic husband and wife emotional companionship</option>
+                    </select>
+
+                    <button onclick="signupAccount()">Create account</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="setup-page" class="hidden" aria-labelledby="setup-heading">
             <h1 id="setup-heading">Companion Connection</h1>
             <p class="subtitle">A private, comfortable place to be honest without feeling watched or judged.</p>
             <hr style="border: 0; border-top: 2px solid #EAE5DF; margin-bottom: 25px;">
@@ -270,6 +368,38 @@
             <button onclick="exitAdminPortal()" style="background-color:#E6E1DA; color:#2C2A29;">Back</button>
         </section>
 
+        <section id="profile-page" class="hidden" aria-labelledby="profile-heading">
+            <h2 id="profile-heading">Profile dashboard</h2>
+            <p class="subtitle">A living record of how this relationship feels and evolves.</p>
+
+            <div class="profile-grid">
+                <div class="profile-tile">
+                    <p style="color:#5C554F; margin:0; font-size:14px; font-weight:600;">Name</p>
+                    <span id="profile-name" style="font-size:22px; font-weight:bold; display:block; margin-top:5px;">—</span>
+                </div>
+                <div class="profile-tile">
+                    <p style="color:#5C554F; margin:0; font-size:14px; font-weight:600;">Relationship mode</p>
+                    <span id="profile-relationship" style="font-size:18px; font-weight:bold; display:block; margin-top:5px;">—</span>
+                </div>
+                <div class="profile-tile">
+                    <p style="color:#5C554F; margin:0; font-size:14px; font-weight:600;">Messages this month</p>
+                    <span id="profile-message-count" style="font-size:24px; font-weight:bold; display:block; margin-top:5px;">0</span>
+                </div>
+                <div class="profile-tile">
+                    <p style="color:#5C554F; margin:0; font-size:14px; font-weight:600;">Voice quality</p>
+                    <span style="font-size:24px; font-weight:bold; color:#A36B5E; display:block; margin-top:5px;">HD 48kHz</span>
+                </div>
+            </div>
+
+            <div class="export-row">
+                <button onclick="exportLogs('json')">Export JSON</button>
+                <button onclick="exportLogs('csv')">Export CSV</button>
+            </div>
+
+            <h3>Partner memory timeline</h3>
+            <ul id="memory-timeline" class="memory-timeline"></ul>
+        </section>
+
         <section id="analytics-page" class="hidden" aria-labelledby="analytics-heading">
             <h2 id="analytics-heading">Private insight dashboard</h2>
             <p class="subtitle">A simple record of your conversations and session activity.</p>
@@ -295,12 +425,12 @@
 
     <script>
         const MASTER_ADMIN_PASSWORD = 'SecurePartner2026!';
-        let profile = { name: '', gender: '', stage: '', history: [], sessionId: null };
+        let profile = { name: '', gender: '', stage: '', history: [], sessionId: null, userId: null, email: '', relationship: '' };
         let liveAudioContext, webRtcConnection;
         let isCallActive = false;
 
         function showPage(pageId) {
-            ['setup-page', 'app-workspace', 'admin-login-page', 'analytics-page'].forEach((id) => {
+            ['auth-page', 'setup-page', 'app-workspace', 'admin-login-page', 'profile-page', 'analytics-page'].forEach((id) => {
                 const el = document.getElementById(id);
                 if (el) el.classList.add('hidden');
             });
@@ -314,6 +444,10 @@
 
             if (pageId === 'analytics-page') {
                 loadDashboardMetrics();
+            }
+
+            if (pageId === 'profile-page') {
+                renderProfileDashboard();
             }
         }
 
@@ -336,6 +470,77 @@
             if (voiceView) voiceView.classList.toggle('hidden', isText);
         }
 
+        async function signupAccount() {
+            const name = document.getElementById('signup-name').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const relationship = document.getElementById('signup-relationship').value;
+
+            if (!name || !email || !password) {
+                alert('Please fill in your name, email, and password to create an account.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password, relationship })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to create account.');
+                }
+
+                profile.name = data.name;
+                profile.email = data.email;
+                profile.userId = data.userId;
+                profile.relationship = data.relationship;
+                profile.gender = 'Warm, grounded, calm';
+                profile.stage = data.relationship;
+                document.getElementById('username').value = profile.name;
+                document.getElementById('stage').value = data.relationship;
+
+                showPage('setup-page');
+            } catch (error) {
+                alert(error.message || 'Account creation failed.');
+            }
+        }
+
+        async function loginAccount() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+
+            if (!email || !password) {
+                alert('Please enter both your email and password.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to log in.');
+                }
+
+                profile.name = data.name;
+                profile.email = data.email;
+                profile.userId = data.userId;
+                profile.relationship = data.relationship;
+                profile.gender = 'Warm, grounded, calm';
+                profile.stage = data.relationship;
+                document.getElementById('username').value = profile.name;
+                document.getElementById('stage').value = data.relationship;
+                showPage('setup-page');
+            } catch (error) {
+                alert(error.message || 'Login failed.');
+            }
+        }
+
         async function initializeConnection() {
             const nameVal = document.getElementById('username').value.trim();
             if (!nameVal) {
@@ -354,7 +559,8 @@
                     body: JSON.stringify({
                         name: profile.name,
                         gender: profile.gender,
-                        stage: profile.stage
+                        stage: profile.stage,
+                        userId: profile.userId || null
                     })
                 });
 
@@ -373,7 +579,12 @@
             if (welcome) {
                 welcome.innerText = `You’re in. I’m glad you’re here, ${profile.name}.`;
             }
-            showPage('app-workspace');
+            if (profile.userId) {
+                renderProfileDashboard();
+                showPage('profile-page');
+            } else {
+                showPage('app-workspace');
+            }
         }
 
         async function toggleDuplexVoiceCall() {
@@ -435,11 +646,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         sessionId: profile.sessionId,
-                        profile,
-                        text: textMessage
-                    })
-                });
-
+                        userId: profile.userId || null,
                 const data = await response.json();
                 if (!response.ok) {
                     throw new Error(data.error || 'Unable to send message.');
@@ -471,7 +678,7 @@
 
         async function loadDashboardMetrics() {
             try {
-                const response = await fetch('/api/analytics');
+                const response = await fetch('/api/analytics' + (profile.userId ? '?userId=' + encodeURIComponent(profile.userId) : ''));
                 const data = await response.json();
                 const totalChats = document.getElementById('metric-total-chats');
                 const feed = document.getElementById('admin-log-feed');
@@ -500,6 +707,45 @@
             }
         }
 
+        async function renderProfileDashboard() {
+            if (!profile.userId) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/analytics?userId=' + encodeURIComponent(profile.userId));
+                const data = await response.json();
+                document.getElementById('profile-name').innerText = profile.name || 'Companion';
+                document.getElementById('profile-relationship').innerText = profile.relationship || profile.stage || 'Warm friend';
+                document.getElementById('profile-message-count').innerText = String(data.totalMessages || 0);
+
+                const timeline = document.getElementById('memory-timeline');
+                if (!data.logs || !data.logs.length) {
+                    timeline.innerHTML = '<li class="memory-item">Your relationship history is still new. The first honest conversation will appear here.</li>';
+                    return;
+                }
+
+                const recent = [...data.logs].slice(-8).reverse();
+                timeline.innerHTML = recent
+                    .map((entry) => `
+                        <li class="memory-item">
+                            <strong>${entry.role}</strong><br>
+                            ${entry.content}
+                        </li>
+                    `)
+                    .join('');
+            } catch (error) {
+                const timeline = document.getElementById('memory-timeline');
+                timeline.innerHTML = '<li class="memory-item">Your memory timeline is unavailable right now.</li>';
+            }
+        }
+
+        function exportLogs(format) {
+            const userId = profile.userId || null;
+            const url = '/api/export?format=' + format + (userId ? '&userId=' + encodeURIComponent(userId) : '');
+            window.open(url, '_blank');
+        }
+
         function appendBubble(text, className) {
             const box = document.getElementById('chat-box');
             const bubble = document.createElement('div');
@@ -513,6 +759,10 @@
         function handleKeyPress(e) {
             if (e.key === 'Enter') sendChatMessage();
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            showPage('auth-page');
+        });
     </script>
 </body>
 </html>
