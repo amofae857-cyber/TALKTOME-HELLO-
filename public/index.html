@@ -254,6 +254,15 @@
             50% { box-shadow: 0 0 0 25px rgba(163, 107, 94, 0); transform: scale(1.04); }
             100% { box-shadow: 0 0 0 0 rgba(163, 107, 94, 0); transform: scale(1); }
         }
+
+        @media (max-width: 680px) {
+            body { padding: 10px; }
+            .container { padding: 22px 16px; }
+            .auth-shell, .profile-grid { grid-template-columns: 1fr; }
+            .mode-toggle-bar, .export-row { flex-direction: column; }
+            .mode-btn, .export-row button { width: 100%; }
+            .chat-box { height: 320px; padding: 12px; }
+        }
     </style>
 </head>
 <body>
@@ -303,10 +312,10 @@
 
         <section id="setup-page" class="hidden" aria-labelledby="setup-heading">
             <h1 id="setup-heading">Companion Connection</h1>
-            <p class="subtitle">A private, comfortable place to be honest without feeling watched or judged.</p>
+            <p class="subtitle">A secure, non-judgmental space for honest expression, closeness, and care.</p>
             <hr style="border: 0; border-top: 2px solid #EAE5DF; margin-bottom: 25px;">
 
-            <label for="username">What should I call you?</label>
+            <label for="username">What name do you prefer I call you?</label>
             <input type="text" id="username" placeholder="e.g. Alex" autocomplete="name">
 
             <label for="gender">Voice and presence style</label>
@@ -315,7 +324,7 @@
                 <option>Warm, grounded, calm</option>
             </select>
 
-            <label for="stage">How close do you want this to feel?</label>
+            <label for="stage">How close do you want this connection to feel?</label>
             <select id="stage">
                 <option>Warm friend with affectionate presence</option>
                 <option>Gentle supportive partner</option>
@@ -326,7 +335,7 @@
                 <option>Realistic husband and wife emotional companionship</option>
             </select>
 
-            <button onclick="initializeConnection()">Open my space</button>
+            <button onclick="initializeConnection()">Open secure companion space</button>
         </section>
 
         <section id="app-workspace" class="hidden" aria-labelledby="workspace-title">
@@ -334,8 +343,8 @@
             <p id="workspace-welcome" class="subtitle" role="status"></p>
 
             <nav class="mode-toggle-bar" aria-label="Interface Interaction Options">
-                <button id="view-text-btn" class="mode-btn active" aria-selected="true" onclick="switchInterfaceMode('text')">Message</button>
-                <button id="view-call-btn" class="mode-btn" aria-selected="false" onclick="switchInterfaceMode('call')">Voice call</button>
+                <button id="view-text-btn" class="mode-btn active" aria-selected="true" onclick="switchInterfaceMode('text')">Text chat</button>
+                <button id="view-call-btn" class="mode-btn" aria-selected="false" onclick="switchInterfaceMode('call')">Live audio call</button>
             </nav>
 
             <div id="text-chat-view" role="region" aria-label="Text Interaction History">
@@ -392,8 +401,8 @@
             </div>
 
             <div class="export-row">
-                <button onclick="exportLogs('json')">Export JSON</button>
-                <button onclick="exportLogs('csv')">Export CSV</button>
+                <button onclick="exportLogs('json')">Download JSON</button>
+                <button onclick="exportLogs('csv')">Download CSV</button>
             </div>
 
             <h3>Partner memory timeline</h3>
@@ -756,10 +765,30 @@
             }
         }
 
-        function exportLogs(format) {
+        async function exportLogs(format) {
             const userId = profile.userId || null;
-            const url = '/api/export?format=' + format + (userId ? '&userId=' + encodeURIComponent(userId) + '&authToken=' + encodeURIComponent(profile.authToken) : '');
-            window.open(url, '_blank');
+            const params = new URLSearchParams({ format });
+            if (userId) params.set('userId', userId);
+
+            try {
+                const response = await fetch('/api/export?' + params.toString(), {
+                    headers: profile.authToken ? { Authorization: `Bearer ${profile.authToken}` } : {}
+                });
+                if (!response.ok) {
+                    throw new Error('Unable to export conversation logs.');
+                }
+
+                const content = await response.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = `companion-${format}-logs.${format === 'csv' ? 'csv' : 'json'}`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(link.href);
+            } catch (error) {
+                alert(error.message || 'Unable to export conversation logs.');
+            }
         }
 
         function appendBubble(text, className) {
