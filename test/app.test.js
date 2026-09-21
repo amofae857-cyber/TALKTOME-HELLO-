@@ -80,3 +80,42 @@ test('chat endpoint accepts a session and stores a reply', async () => {
     child.kill();
   }
 });
+
+test('signup and export endpoints work for account flows', async () => {
+  const child = await startServer();
+  try {
+    const signupResponse = await fetch('http://127.0.0.1:3456/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Nina',
+        email: 'nina@example.com',
+        password: 'secret123',
+        relationship: 'Warm friend with affectionate presence'
+      })
+    });
+    const signupData = await signupResponse.json();
+    assert.equal(signupResponse.status, 200);
+    assert.ok(signupData.userId);
+
+    const memoryResponse = await fetch('http://127.0.0.1:3456/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: signupData.userId,
+        profile: { name: 'Nina', stage: 'Warm friend with affectionate presence' },
+        text: 'I miss you and I feel emotionally safe with you.'
+      })
+    });
+    const memoryData = await memoryResponse.json();
+    assert.equal(memoryResponse.status, 200);
+    assert.ok(memoryData.reply.length > 0);
+
+    const exportResponse = await fetch('http://127.0.0.1:3456/api/export?format=json&userId=' + signupData.userId);
+    const exportData = await exportResponse.json();
+    assert.equal(exportResponse.status, 200);
+    assert.ok(Array.isArray(exportData.logs));
+  } finally {
+    child.kill();
+  }
+});
