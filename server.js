@@ -100,6 +100,12 @@ function requireAdminAccess(req) {
   return Boolean(token && adminTokens.has(token));
 }
 
+function matchesAdminPassword(value) {
+  const candidate = Buffer.from(String(value || ''));
+  const expected = Buffer.from(adminPassword);
+  return candidate.length === expected.length && crypto.timingSafeEqual(candidate, expected);
+}
+
 async function ensureColumnExists(tableName, columnName, columnDefinition) {
   const rows = await allSql(`PRAGMA table_info(${tableName})`);
   if (!rows.some((row) => row.name === columnName)) {
@@ -325,7 +331,7 @@ app.post('/api/admin/login', (req, res) => {
   if (!adminPassword) {
     return res.status(503).json({ error: 'Administrative access is not configured.' });
   }
-  if (!password || !crypto.timingSafeEqual(Buffer.from(String(password)), Buffer.from(adminPassword))) {
+  if (!matchesAdminPassword(password)) {
     return res.status(401).json({ error: 'Invalid administrative password.' });
   }
 

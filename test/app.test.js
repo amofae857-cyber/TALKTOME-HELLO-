@@ -160,6 +160,13 @@ test('admin analytics requires server-side authentication', async () => {
     const publicResponse = await fetch('http://127.0.0.1:3456/api/analytics');
     assert.equal(publicResponse.status, 401);
 
+    const invalidLoginResponse = await fetch('http://127.0.0.1:3456/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'wrong' })
+    });
+    assert.equal(invalidLoginResponse.status, 401);
+
     const loginResponse = await fetch('http://127.0.0.1:3456/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
