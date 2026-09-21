@@ -9,6 +9,7 @@ const PORT = process.env.PORT || 3000;
 const projectRoot = __dirname;
 const dataDir = path.join(projectRoot, 'data');
 const dbPath = path.join(dataDir, 'companion.db');
+const authTokens = new Map();
 
 fs.mkdirSync(dataDir, { recursive: true });
 
@@ -56,6 +57,25 @@ function allSql(sql, params = []) {
 
 function hashPassword(value) {
   return crypto.createHash('sha256').update(String(value)).digest('hex');
+}
+
+function createAuthToken(userId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  authTokens.set(token, userId);
+  return token;
+}
+
+function getAuthenticatedUserId(req) {
+  const header = String(req.get('authorization') || '');
+  const bearerToken = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const token = bearerToken || String(req.query.authToken || '');
+  return authTokens.get(token) || null;
+}
+
+function requireUserAccess(req, requestedUserId) {
+  if (!requestedUserId) return null;
+  const authenticatedUserId = getAuthenticatedUserId(req);
+  return authenticatedUserId === requestedUserId ? authenticatedUserId : null;
 }
 
 async function ensureColumnExists(tableName, columnName, columnDefinition) {
@@ -225,9 +245,11 @@ app.post('/api/signup', async (req, res) => {
       [userId, String(name).trim(), cleanEmail, hashPassword(password), relationship || 'Warm friend with affectionate presence']
     );
 
+    const authToken = createAuthToken(userId);
     res.json({
       status: 'ok',
       userId,
+      authToken,
       name: String(name).trim(),
       email: cleanEmail,
       relationship: relationship || 'Warm friend with affectionate presence'
@@ -253,7 +275,7 @@ app.post('/api/login', async (req, res) => {
     }
 
     const user = rows[0];
-    res.json({ status: 'ok', userId: user.id, name: user.name, email: user.email, relationship: user.relationship });
+    res.json({ status: 'ok', userId: user.id, authToken: createAuthToken(user.id), name: user.name, email: user.email, relationship: user.relationship });
   } catch (error) {
     console.error('Login failed:', error);
     res.status(500).json({ error: 'Unable to log in.' });
@@ -265,6 +287,10 @@ app.post('/api/session', async (req, res) => {
     const { name, gender, stage, userId } = req.body || {};
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: 'Name is required.' });
+    }
+
+    if (userId && !requireUserAccess(req, userId)) {
+      return res.status(401).json({ error: 'Account authentication is required.' });
     }
 
     const sessionId = crypto.randomUUID();
@@ -296,6 +322,10 @@ app.post('/api/chat', async (req, res) => {
 
     if (!messageText) {
       return res.status(400).json({ error: 'Message text is required.' });
+    }
+
+    if (userId && !requireUserAccess(req, userId)) {
+      return res.status(401).json({ error: 'Account authentication is required.' });
     }
 
     let activeSessionId = sessionId || null;
@@ -372,6 +402,9 @@ app.post('/api/chat', async (req, res) => {
 app.get('/api/analytics', async (req, res) => {
   try {
     const userId = req.query.userId || null;
+    if (userId && !requireUserAccess(req, userId)) {
+      return res.status(401).json({ error: 'Account authentication is required.' });
+    }
     let sessions = [];
     let messages = [];
 
@@ -404,6 +437,9 @@ app.get('/api/analytics', async (req, res) => {
 app.get('/api/export', async (req, res) => {
   try {
     const userId = req.query.userId || null;
+    if (userId && !requireUserAccess(req, userId)) {
+      return res.status(401).json({ error: 'Account authentication is required.' });
+    }
     const format = String(req.query.format || 'json').toLowerCase();
     const rows = userId
       ? await allSql('SELECT id, session_id, user_id, role, content, created_at FROM messages WHERE user_id = ? ORDER BY created_at ASC', [userId])
