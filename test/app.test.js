@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
+const fs = require('node:fs');
 const path = require('node:path');
 
 const appPath = path.join(__dirname, '..', 'server.js');
@@ -39,6 +40,17 @@ function startServer() {
     });
   });
 }
+
+test('all navigation targets resolve to accessible page sections', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const pageSections = [...html.matchAll(/<section[^>]*id="([^"]+)"/g)].map((match) => match[1]);
+  const navigationTargets = [...html.matchAll(/showPage\('([^']+)'\)/g)].map((match) => match[1]);
+
+  assert.ok(pageSections.length >= 6);
+  for (const target of new Set(navigationTargets)) {
+    assert.ok(pageSections.includes(target), `Missing page section for navigation target: ${target}`);
+  }
+});
 
 test('server responds on health endpoint', async () => {
   const child = await startServer();
