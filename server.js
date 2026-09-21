@@ -14,16 +14,24 @@ fs.mkdirSync(dataDir, { recursive: true });
 
 if (process.env.RESET_DB === '1' || process.env.NODE_ENV === 'test') {
   try {
-    fs.rmSync(dbPath, { force: true });
+    if (fs.existsSync(dbPath)) {
+      fs.rmSync(dbPath, { force: true });
+    }
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.chmodSync(dataDir, 0o777);
   } catch (error) {
     console.warn('Unable to reset database file:', error.message);
   }
 }
 
-const db = new sqlite3.Database(dbPath, (err) => {
+const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
   if (err) {
     console.error('Database connection error:', err.message);
     process.exit(1);
+  }
+  fs.chmodSync(dataDir, 0o777);
+  if (fs.existsSync(dbPath)) {
+    fs.chmodSync(dbPath, 0o666);
   }
   console.log('Connected to SQLite database');
 });
