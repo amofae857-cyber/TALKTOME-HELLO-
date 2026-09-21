@@ -101,12 +101,14 @@ test('signup and export endpoints work for account flows', async () => {
 
     const memoryResponse = await fetch('http://127.0.0.1:3456/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + signupData.authToken
+      },
       body: JSON.stringify({
         userId: signupData.userId,
         profile: { name: 'Nina', stage: 'Warm friend with affectionate presence' },
-        text: 'I miss you and I feel emotionally safe with you.',
-        authToken: signupData.authToken
+        text: 'I miss you and I feel emotionally safe with you.'
       })
     });
     const memoryData = await memoryResponse.json();
