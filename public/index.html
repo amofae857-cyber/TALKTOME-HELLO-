@@ -425,7 +425,7 @@
 
     <script>
         const MASTER_ADMIN_PASSWORD = 'SecurePartner2026!';
-        let profile = { name: '', gender: '', stage: '', history: [], sessionId: null, userId: null, email: '', relationship: '' };
+        let profile = { name: '', gender: '', stage: '', history: [], sessionId: null, userId: null, authToken: '', email: '', relationship: '' };
         let liveAudioContext, webRtcConnection;
         let isCallActive = false;
 
@@ -495,6 +495,7 @@
                 profile.name = data.name;
                 profile.email = data.email;
                 profile.userId = data.userId;
+                profile.authToken = data.authToken;
                 profile.relationship = data.relationship;
                 profile.gender = 'Warm, grounded, calm';
                 profile.stage = data.relationship;
@@ -530,6 +531,7 @@
                 profile.name = data.name;
                 profile.email = data.email;
                 profile.userId = data.userId;
+                profile.authToken = data.authToken;
                 profile.relationship = data.relationship;
                 profile.gender = 'Warm, grounded, calm';
                 profile.stage = data.relationship;
@@ -555,7 +557,10 @@
             try {
                 const response = await fetch('/api/session', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(profile.authToken ? { Authorization: `Bearer ${profile.authToken}` } : {})
+                    },
                     body: JSON.stringify({
                         name: profile.name,
                         gender: profile.gender,
@@ -643,10 +648,17 @@
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(profile.authToken ? { Authorization: `Bearer ${profile.authToken}` } : {})
+                    },
                     body: JSON.stringify({
                         sessionId: profile.sessionId,
                         userId: profile.userId || null,
+                        profile,
+                        text: textMessage
+                    })
+                });
                 const data = await response.json();
                 if (!response.ok) {
                     throw new Error(data.error || 'Unable to send message.');
@@ -678,7 +690,9 @@
 
         async function loadDashboardMetrics() {
             try {
-                const response = await fetch('/api/analytics' + (profile.userId ? '?userId=' + encodeURIComponent(profile.userId) : ''));
+                const response = await fetch('/api/analytics' + (profile.userId ? '?userId=' + encodeURIComponent(profile.userId) : ''), {
+                    headers: profile.authToken ? { Authorization: `Bearer ${profile.authToken}` } : {}
+                });
                 const data = await response.json();
                 const totalChats = document.getElementById('metric-total-chats');
                 const feed = document.getElementById('admin-log-feed');
@@ -713,7 +727,9 @@
             }
 
             try {
-                const response = await fetch('/api/analytics?userId=' + encodeURIComponent(profile.userId));
+                const response = await fetch('/api/analytics?userId=' + encodeURIComponent(profile.userId), {
+                    headers: { Authorization: `Bearer ${profile.authToken}` }
+                });
                 const data = await response.json();
                 document.getElementById('profile-name').innerText = profile.name || 'Companion';
                 document.getElementById('profile-relationship').innerText = profile.relationship || profile.stage || 'Warm friend';
@@ -742,7 +758,7 @@
 
         function exportLogs(format) {
             const userId = profile.userId || null;
-            const url = '/api/export?format=' + format + (userId ? '&userId=' + encodeURIComponent(userId) : '');
+            const url = '/api/export?format=' + format + (userId ? '&userId=' + encodeURIComponent(userId) + '&authToken=' + encodeURIComponent(profile.authToken) : '');
             window.open(url, '_blank');
         }
 

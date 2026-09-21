@@ -97,6 +97,7 @@ test('signup and export endpoints work for account flows', async () => {
     const signupData = await signupResponse.json();
     assert.equal(signupResponse.status, 200);
     assert.ok(signupData.userId);
+    assert.ok(signupData.authToken);
 
     const memoryResponse = await fetch('http://127.0.0.1:3456/api/chat', {
       method: 'POST',
@@ -104,17 +105,35 @@ test('signup and export endpoints work for account flows', async () => {
       body: JSON.stringify({
         userId: signupData.userId,
         profile: { name: 'Nina', stage: 'Warm friend with affectionate presence' },
-        text: 'I miss you and I feel emotionally safe with you.'
+        text: 'I miss you and I feel emotionally safe with you.',
+        authToken: signupData.authToken
       })
     });
     const memoryData = await memoryResponse.json();
     assert.equal(memoryResponse.status, 200);
     assert.ok(memoryData.reply.length > 0);
 
-    const exportResponse = await fetch('http://127.0.0.1:3456/api/export?format=json&userId=' + signupData.userId);
+    const exportResponse = await fetch('http://127.0.0.1:3456/api/export?format=json&userId=' + signupData.userId + '&authToken=' + signupData.authToken);
     const exportData = await exportResponse.json();
     assert.equal(exportResponse.status, 200);
     assert.ok(Array.isArray(exportData.logs));
+
+    const csvResponse = await fetch('http://127.0.0.1:3456/api/export?format=csv&userId=' + signupData.userId + '&authToken=' + signupData.authToken);
+    assert.equal(csvResponse.status, 200);
+    assert.match(await csvResponse.text(), /id,role,content,created_at,session_id,user_id/);
+
+    const loginResponse = await fetch('http://127.0.0.1:3456/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'nina@example.com', password: 'secret123' })
+    });
+    const loginData = await loginResponse.json();
+    assert.equal(loginResponse.status, 200);
+    assert.equal(loginData.userId, signupData.userId);
+    assert.ok(loginData.authToken);
+
+    const unauthorizedResponse = await fetch('http://127.0.0.1:3456/api/analytics?userId=' + signupData.userId);
+    assert.equal(unauthorizedResponse.status, 401);
   } finally {
     child.kill();
   }
