@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Companion Workspace - Safe Connection</title>
+    <style>
+        body {
+            background-color: #FBF9F6;
+            color: #2C2A29;
+            font-family: 'Georgia', serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: #FFFDFB;
+            border: 1px solid #EAE5DF;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.01);
+            position: relative;
+        }
+
+        h1, h2, h3 {
+            font-weight: 400;
+            color: #3D3A36;
+            margin-top: 0;
+        }
+
+        .subtitle {
+            color: #5C554F;
+            font-style: italic;
+            margin-top: -10px;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #3D3A36;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 14px;
+            margin: 5px 0 25px 0;
+            border: 2px solid #5C554F;
+            border-radius: 24px;
+            background: #FFFDFB;
+            box-sizing: border-box;
+            font-size: 16px;
+            color: #2C2A29;
+        }
+
+        input:focus, select:focus {
+            outline: 3px solid #A36B5E;
+            outline-offset: 2px;
+        }
+
+        button {
+            background-color: #5C554F;
+            color: #FBF9F6;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        button:hover, button:focus {
+            background-color: #2C2A29;
+            outline: 3px solid #A36B5E;
+            outline-offset: 2px;
+        }
+
+        .chat-box {
+            height: 380px;
+            overflow-y: auto;
+            border: 2px solid #EAE5DF;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: #FBF9F6;
+        }
+
+        .user-bubble {
+            background: #E6E1DA;
+            padding: 12px 18px;
+            border-radius: 18px 18px 4px 18px;
+            margin: 10px 0;
+            float: right;
+            clear: both;
+            max-width: 75%;
+            line-height: 1.5;
+        }
+
+        .companion-bubble {
+            background: #FFFDFB;
+            border: 2px solid #DCD5CD;
+            padding: 12px 18px;
+            border-radius: 18px 18px 18px 4px;
+            margin: 10px 0;
+            float: left;
+            clear: both;
+            max-width: 75%;
+            line-height: 1.5;
+        }
+
+        .call-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #FFFDFB;
+            border: 2px solid #EAE5DF;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .pulse-orb {
+            width: 90px;
+            height: 90px;
+            background: #A36B5E;
+            border-radius: 50%;
+            margin: 30px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+        }
+
+        .pulse-orb.active {
+            animation: smooth-wave 2s infinite ease-in-out;
+            background: #8C5345;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .admin-link {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 14px;
+            color: #5C554F;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 500;
+            width: auto;
+            padding: 8px 14px;
+        }
+
+        .mode-toggle-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            background-color: #E6E1DA;
+            color: #2C2A29;
+            font-size: 14px;
+            padding: 10px 20px;
+            width: auto;
+        }
+
+        .mode-btn.active {
+            background-color: #5C554F;
+            color: #FBF9F6;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        @keyframes smooth-wave {
+            0% { box-shadow: 0 0 0 0 rgba(163, 107, 94, 0.6); transform: scale(1); }
+            50% { box-shadow: 0 0 0 25px rgba(163, 107, 94, 0); transform: scale(1.04); }
+            100% { box-shadow: 0 0 0 0 rgba(163, 107, 94, 0); transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <main class="container" id="main-content" role="main">
+        <button class="admin-link" id="admin-toggle" onclick="showPage('admin-login-page')" aria-label="Open Administrative Security Login Panel">Admin Panel</button>
+
+        <section id="setup-page" aria-labelledby="setup-heading">
+            <h1 id="setup-heading">Companion Connection</h1>
+            <p class="subtitle">A secure, non-judgmental space for raw personal expression and intimacy.</p>
+            <hr style="border: 0; border-top: 2px solid #EAE5DF; margin-bottom: 25px;">
+
+            <label for="username">What name do you prefer I call you?</label>
+            <input type="text" id="username" placeholder="e.g. Alex" autocomplete="name">
+
+            <label for="gender">Vocal Identity Tone Cadence</label>
+            <select id="gender">
+                <option>Gentle Woman (Soft, Empathetic Cadence)</option>
+                <option>Warm Man (Deep, Grounded Resonances)</option>
+            </select>
+
+            <label for="stage">Communication Matrix Dynamic Depth</label>
+            <select id="stage">
+                <option>Platonic Friend</option>
+                <option>Comforting Confidant (Active Empathetic Listening)</option>
+                <option>Intimate Relationship (Deep Mutual Vulnerability &amp; Intimacy)</option>
+            </select>
+
+            <button onclick="initializeConnection()">Open Secure Companion Pipeline</button>
+        </section>
+
+        <section id="app-workspace" class="hidden" aria-labelledby="workspace-title">
+            <h1 id="workspace-title">Companion Chatroom</h1>
+            <p id="workspace-welcome" class="subtitle" role="status"></p>
+
+            <nav class="mode-toggle-bar" aria-label="Interface Interaction Options">
+                <button id="view-text-btn" class="mode-btn active" aria-selected="true" onclick="switchInterfaceMode('text')">Text Chat Window</button>
+                <button id="view-call-btn" class="mode-btn" aria-selected="false" onclick="switchInterfaceMode('call')">Live Audio Call Channel</button>
+            </nav>
+
+            <div id="text-chat-view" role="region" aria-label="Text Interaction History">
+                <div class="chat-box" id="chat-box" role="log" aria-live="polite" aria-label="Message logs container"></div>
+
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label for="chat-input" class="sr-only">Type message content to your companion</label>
+                    <input type="text" id="chat-input" placeholder="Express yourself freely..." style="margin:0;" onkeypress="handleKeyPress(event)">
+                    <button onclick="sendChatMessage()" style="width: auto; padding: 0 25px;">Send</button>
+                </div>
+            </div>
+
+            <div id="voice-call-view" class="hidden" role="region" aria-label="Voice Call Control Space">
+                <div class="call-overlay">
+                    <p id="call-status-text" style="color:#2C2A29; font-weight:500;" role="status">Call Status: Disconnected</p>
+                    <div id="vocal-orb" class="pulse-orb" aria-hidden="true">🎙️</div>
+                    <button id="call-action-btn" onclick="toggleDuplexVoiceCall()" aria-live="assertive">Initialize Safe Call</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="admin-login-page" class="hidden" aria-labelledby="admin-login-heading">
+            <h2 id="admin-login-heading">Administration Authorization</h2>
+            <p class="subtitle">Protected gateway for data evaluation logs.</p>
+
+            <label for="admin-pass">Enter Administrative Master Passphrase</label>
+            <input type="password" id="admin-pass" placeholder="Type key here...">
+
+            <button onclick="verifyAdminPassword()" style="margin-bottom: 15px;">Authorize Secure Access</button>
+            <button onclick="exitAdminPortal()" style="background-color:#E6E1DA; color:#2C2A29;">Return Back</button>
+        </section>
+
+        <section id="analytics-page" class="hidden" aria-labelledby="analytics-heading">
+            <h2 id="analytics-heading">System Insight Dashboard</h2>
+            <p class="subtitle">Real-time interaction stream evaluations.</p>
+            <hr style="border: 0; border-top: 2px solid #EAE5DF; margin-bottom: 20px;">
+
+            <div style="display: flex; gap: 15px; margin-bottom: 25px;" role="region" aria-label="Statistical Data Tiles">
+                <div style="flex:1; background:#FBF9F6; padding:15px; border:2px solid #EAE5DF; border-radius:8px;">
+                    <p style="color:#5C554F; margin:0; font-size:14px; font-weight:600;">Total Active Exchanges</p>
+                    <span id="metric-total-chats" style="font-size:24px; font-weight:bold; display:block; margin-top:5px;">0</span>
+                </div>
+                <div style="flex:1; background:#FBF9F6; padding:15px; border:2px solid #EAE5DF; border-radius:8px;">
+                    <p style="color:#5C554F; margin:0; font-size:14px; font-weight:600;">Voice Connection Quality</p>
+                    <span style="font-size:24px; font-weight:bold; color:#A36B5E; display:block; margin-top:5px;">HD 48kHz</span>
+                </div>
+            </div>
+
+            <h3 id="feed-heading">Conversation Activity Transcript Log</h3>
+            <div id="admin-log-feed" style="background:#FBF9F6; border:2px solid #EAE5DF; border-radius:8px; padding:15px; min-height:140px;">
+                No conversation logs recorded in active system execution runtime memory matrices.
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const MASTER_ADMIN_PASSWORD = 'SecurePartner2026!';
+        let profile = { name: '', gender: '', stage: '', history: [], sessionId: null };
+        let liveAudioContext, webRtcConnection;
+        let isCallActive = false;
+
+        function showPage(pageId) {
+            ['setup-page', 'app-workspace', 'admin-login-page', 'analytics-page'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+
+            const target = document.getElementById(pageId);
+            if (target) {
+                target.classList.remove('hidden');
+                target.setAttribute('tabindex', '-1');
+                target.focus();
+            }
+
+            if (pageId === 'analytics-page') {
+                loadDashboardMetrics();
+            }
+        }
+
+        function switchInterfaceMode(mode) {
+            const isText = mode === 'text';
+            const textBtn = document.getElementById('view-text-btn');
+            const callBtn = document.getElementById('view-call-btn');
+            const textView = document.getElementById('text-chat-view');
+            const voiceView = document.getElementById('voice-call-view');
+
+            if (textBtn) {
+                textBtn.classList.toggle('active', isText);
+                textBtn.setAttribute('aria-selected', isText ? 'true' : 'false');
+            }
+            if (callBtn) {
+                callBtn.classList.toggle('active', !isText);
+                callBtn.setAttribute('aria-selected', !isText ? 'true' : 'false');
+            }
+            if (textView) textView.classList.toggle('hidden', !isText);
+            if (voiceView) voiceView.classList.toggle('hidden', isText);
+        }
+
+        async function initializeConnection() {
+            const nameVal = document.getElementById('username').value.trim();
+            if (!nameVal) {
+                alert('Please fill out your name to access the session space.');
+                return;
+            }
+
+            profile.name = nameVal;
+            profile.gender = document.getElementById('gender').value;
+            profile.stage = document.getElementById('stage').value;
+
+            try {
+                const response = await fetch('/api/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: profile.name,
+                        gender: profile.gender,
+                        stage: profile.stage
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to create session.');
+                }
+
+                profile.sessionId = data.sessionId;
+            } catch (error) {
+                alert(error.message || 'Unable to initialize a secure session.');
+                return;
+            }
+
+            const welcome = document.getElementById('workspace-welcome');
+            if (welcome) {
+                welcome.innerText = `Connection established safely. Welcome back, ${profile.name}.`;
+            }
+            showPage('app-workspace');
+        }
+
+        async function toggleDuplexVoiceCall() {
+            const orb = document.getElementById('vocal-orb');
+            const statusText = document.getElementById('call-status-text');
+            const callBtn = document.getElementById('call-action-btn');
+
+            if (!isCallActive) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: false,
+                            channelCount: 2,
+                            sampleRate: 48000
+                        }
+                    });
+
+                    liveAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+                    orb.classList.add('active');
+                    statusText.innerText = 'Call Status: Active. Listening to your presence...';
+                    callBtn.innerText = 'Terminate Secure Call Session';
+                    callBtn.style.backgroundColor = '#D14949';
+                    isCallActive = true;
+
+                    webRtcConnection = new RTCPeerConnection();
+                    stream.getTracks().forEach((track) => webRtcConnection.addTrack(track, stream));
+                } catch (err) {
+                    alert('Microphone hardware layer is unavailable or blocked in this browser configuration.');
+                }
+            } else {
+                if (liveAudioContext) {
+                    liveAudioContext.close();
+                }
+                if (webRtcConnection) {
+                    webRtcConnection.close();
+                }
+                orb.classList.remove('active');
+                statusText.innerText = 'Call Status: Session Disconnected';
+                callBtn.innerText = 'Initialize Safe Call';
+                callBtn.style.backgroundColor = '#A36B5E';
+                isCallActive = false;
+            }
+        }
+
+        async function sendChatMessage() {
+            const inputField = document.getElementById('chat-input');
+            const textMessage = inputField.value.trim();
+            if (!textMessage) return;
+
+            inputField.value = '';
+            appendBubble(textMessage, 'user-bubble');
+            profile.history.push({ role: 'user', content: textMessage });
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: profile.sessionId,
+                        profile,
+                        text: textMessage
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to send message.');
+                }
+
+                appendBubble(data.reply, 'companion-bubble');
+                profile.history.push({ role: 'assistant', content: data.reply });
+            } catch (e) {
+                const fallback = "I hear the emotion in your words. I'm right here with you, completely.";
+                appendBubble(fallback, 'companion-bubble');
+                profile.history.push({ role: 'assistant', content: fallback });
+            }
+        }
+
+        function verifyAdminPassword() {
+            const pass = document.getElementById('admin-pass').value;
+            if (pass === MASTER_ADMIN_PASSWORD) {
+                document.getElementById('admin-pass').value = '';
+                showPage('analytics-page');
+            } else {
+                alert('Invalid administrative password confirmation code pattern.');
+                document.getElementById('admin-pass').value = '';
+            }
+        }
+
+        function exitAdminPortal() {
+            showPage(profile.name ? 'app-workspace' : 'setup-page');
+        }
+
+        async function loadDashboardMetrics() {
+            try {
+                const response = await fetch('/api/analytics');
+                const data = await response.json();
+                const totalChats = document.getElementById('metric-total-chats');
+                const feed = document.getElementById('admin-log-feed');
+
+                if (totalChats) {
+                    totalChats.innerText = String(data.totalMessages || 0);
+                }
+
+                if (!data.logs || data.logs.length === 0) {
+                    feed.innerHTML = 'No conversation logs recorded in active system execution runtime memory matrices.';
+                    return;
+                }
+
+                feed.innerHTML = data.logs
+                    .map((entry) => `
+                        <div style="margin-bottom:8px; padding-bottom:6px; border-bottom:1px dashed #EAE5DF;">
+                            <strong>${entry.role}:</strong> ${entry.content}
+                        </div>
+                    `)
+                    .join('');
+            } catch (error) {
+                const feed = document.getElementById('admin-log-feed');
+                if (feed) {
+                    feed.innerHTML = 'Unable to load dashboard logs at this time.';
+                }
+            }
+        }
+
+        function appendBubble(text, className) {
+            const box = document.getElementById('chat-box');
+            const bubble = document.createElement('div');
+            bubble.className = className;
+            bubble.innerText = text;
+            bubble.setAttribute('role', 'text');
+            box.appendChild(bubble);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendChatMessage();
+        }
+    </script>
+</body>
+</html>
