@@ -45,6 +45,7 @@ const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CR
   }
   console.log('Connected to SQLite database');
 });
+let databaseReady;
 
 function runSql(sql, params = []) {
   return new Promise((resolve, reject) => {
@@ -230,6 +231,15 @@ async function saveUserMemory(userId, profile, text, reply) {
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(projectRoot, 'public')));
+app.use(async (req, res, next) => {
+  try {
+    await databaseReady;
+    next();
+  } catch (error) {
+    console.error('Database initialization failed:', error);
+    res.status(503).json({ error: 'The account service is temporarily unavailable.' });
+  }
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'Companion Workspace' });
@@ -249,10 +259,17 @@ app.post('/api/signup', async (req, res) => {
     }
 
     const userId = crypto.randomUUID();
-    await runSql(
-      'INSERT INTO users (id, name, email, password_hash, relationship) VALUES (?, ?, ?, ?, ?)',
-      [userId, String(name).trim(), cleanEmail, hashPassword(password), relationship || 'Warm friend with affectionate presence']
-    );
+    try {
+      await runSql(
+        'INSERT INTO users (id, name, email, password_hash, relationship) VALUES (?, ?, ?, ?, ?)',
+        [userId, String(name).trim(), cleanEmail, hashPassword(password), relationship || 'Warm friend with affectionate presence']
+      );
+    } catch (error) {
+      if (String(error.message).includes('UNIQUE constraint failed: users.email')) {
+        return res.status(409).json({ error: 'An account with that email already exists.' });
+      }
+      throw error;
+    }
 
     const authToken = createAuthToken(userId);
     res.json({
@@ -510,8 +527,13 @@ function listenOnPort(port, fallbackPort = null) {
 }
 
 async function startServer() {
-  await initializeDatabase();
+  databaseReady = initializeDatabase();
+  await databaseReady;
   listenOnPort(PORT, PORT === DEFAULT_PORT ? 3001 : null);
+}
+
+if (!databaseReady) {
+  databaseReady = initializeDatabase();
 }
 
 if (require.main === module) {
