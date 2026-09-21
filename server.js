@@ -5,7 +5,8 @@ const crypto = require('crypto');
 const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const DEFAULT_PORT = 3000;
+const PORT = Number(process.env.PORT) || DEFAULT_PORT;
 const projectRoot = __dirname;
 const dataDir = path.join(projectRoot, 'data');
 const dbPath = path.join(dataDir, 'companion.db');
@@ -476,11 +477,33 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(projectRoot, 'public', 'index.html'));
 });
 
+function listenOnPort(port, fallbackPort = null) {
+  const server = app.listen(port, () => {
+    console.log(`Companion workspace running on http://localhost:${port}`);
+  });
+
+  server.on('error', async (error) => {
+    if (error.code === 'EADDRINUSE' && fallbackPort) {
+      console.warn(`Port ${port} is busy. Retrying on ${fallbackPort}.`);
+      await initializeDatabase();
+      listenOnPort(fallbackPort, null);
+      return;
+    }
+
+    if (error.code === 'EADDRINUSE' && port === DEFAULT_PORT) {
+      const nextPort = 3001;
+      console.warn(`Port ${DEFAULT_PORT} is busy. Retrying on ${nextPort}.`);
+      listenOnPort(nextPort, null);
+      return;
+    }
+
+    throw error;
+  });
+}
+
 async function startServer() {
   await initializeDatabase();
-  app.listen(PORT, () => {
-    console.log(`Companion workspace running on http://localhost:${PORT}`);
-  });
+  listenOnPort(PORT, PORT === DEFAULT_PORT ? 3001 : null);
 }
 
 if (require.main === module) {

@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "build": "node --check server.js",
-    "start": "PORT=3001 node server.js",
+    "start": "node server.js",
     "test": "node --test"
   },
   "dependencies": {
