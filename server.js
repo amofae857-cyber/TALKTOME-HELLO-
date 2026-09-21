@@ -10,10 +10,13 @@ const DEFAULT_PORT = 3000;
 const PORT = Number(process.env.PORT) || DEFAULT_PORT;
 const projectRoot = __dirname;
 const isVercelRuntime = Boolean(process.env.VERCEL);
-const dataDir = isVercelRuntime
-  ? path.join(os.tmpdir(), 'talktome-hello-data')
-  : path.join(projectRoot, 'data');
-const dbPath = path.join(dataDir, 'companion.db');
+const configuredDatabasePath = process.env.DATABASE_PATH || '';
+const dbPath = configuredDatabasePath
+  ? (path.isAbsolute(configuredDatabasePath) ? configuredDatabasePath : path.join(projectRoot, configuredDatabasePath))
+  : isVercelRuntime
+    ? path.join(os.tmpdir(), 'talktome-hello-data', 'companion.db')
+    : path.join(projectRoot, 'data', 'companion.db');
+const dataDir = path.dirname(dbPath);
 const authTokens = new Map();
 const adminTokens = new Set();
 const adminPassword = String(process.env.ADMIN_PASSWORD || '');
@@ -260,7 +263,7 @@ app.use(async (req, res, next) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, service: 'Companion Workspace' });
+  res.json({ ok: true, service: 'Companion Workspace', database: 'ready' });
 });
 
 app.post('/api/signup', async (req, res) => {

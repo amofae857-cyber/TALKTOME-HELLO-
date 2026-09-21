@@ -18,9 +18,12 @@ npm start
 
 Then open http://localhost:3000
 
-## Admin access
+## Configuration
 
-Password: SecurePartner2026!
+Copy `.env.example` to `.env` and replace the admin password placeholder with a
+private value before starting the app. `DATABASE_PATH` defaults to
+`data/companion.db` locally. On Vercel, SQLite defaults to a writable temporary
+directory, so durable production storage requires a managed database.
 
 ## Tests
 

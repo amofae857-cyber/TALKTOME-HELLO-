@@ -60,6 +60,7 @@ test('server responds on health endpoint', async () => {
     const data = await response.json();
     assert.equal(response.status, 200);
     assert.equal(data.ok, true);
+    assert.equal(data.database, 'ready');
   } finally {
     child.kill();
   }
