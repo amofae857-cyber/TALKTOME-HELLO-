@@ -249,6 +249,41 @@
             line-height: 1.5;
         }
 
+        .roadmap-grid {
+            display: grid;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .roadmap-item {
+            display: grid;
+            grid-template-columns: 92px 1fr;
+            gap: 16px;
+            align-items: start;
+            background: #FBF9F6;
+            border: 2px solid #EAE5DF;
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .roadmap-status {
+            color: #8C5345;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .roadmap-item h3 {
+            margin-bottom: 6px;
+        }
+
+        .roadmap-item p {
+            color: #5C554F;
+            line-height: 1.5;
+            margin: 0;
+        }
+
         .export-row {
             display: flex;
             gap: 10px;
@@ -297,6 +332,7 @@
             <button type="button" onclick="showPage('app-workspace')">Workspace</button>
             <button type="button" onclick="showPage('profile-page')">Profile</button>
             <button type="button" onclick="showPage('analytics-page')">Analytics</button>
+            <button type="button" onclick="showPage('roadmap-page')">Roadmap</button>
             <button type="button" onclick="showPage('admin-login-page')">Admin</button>
         </nav>
 
@@ -461,6 +497,42 @@
                 No conversation logs recorded in active system execution runtime memory matrices.
             </div>
         </section>
+
+        <section id="roadmap-page" class="hidden" aria-labelledby="roadmap-heading">
+            <h2 id="roadmap-heading">Project roadmap</h2>
+            <p class="subtitle">A clear view of what is working now and what comes next.</p>
+
+            <div class="roadmap-grid" role="list" aria-label="Project delivery milestones">
+                <article class="roadmap-item" role="listitem">
+                    <div class="roadmap-status">Live</div>
+                    <div>
+                        <h3>Core companion workspace</h3>
+                        <p>Account creation, login, setup, text chat, voice mode, profile history, exports, analytics, and admin access are available in the deployed app.</p>
+                    </div>
+                </article>
+                <article class="roadmap-item" role="listitem">
+                    <div class="roadmap-status">Live</div>
+                    <div>
+                        <h3>Production delivery</h3>
+                        <p>GitHub main is connected to Vercel, with production deployments and health checks available at the live project URL.</p>
+                    </div>
+                </article>
+                <article class="roadmap-item" role="listitem">
+                    <div class="roadmap-status">Next</div>
+                    <div>
+                        <h3>Durable account storage</h3>
+                        <p>Move persistent account and conversation storage from serverless temporary SQLite to a managed production database.</p>
+                    </div>
+                </article>
+                <article class="roadmap-item" role="listitem">
+                    <div class="roadmap-status">Next</div>
+                    <div>
+                        <h3>Conversation quality</h3>
+                        <p>Add configurable response policies, stronger privacy controls, and a review loop for safer, more consistent companion replies.</p>
+                    </div>
+                </article>
+            </div>
+        </section>
     </main>
 
     <script>
@@ -470,7 +542,7 @@
         let isCallActive = false;
 
         function showPage(pageId) {
-            ['auth-page', 'setup-page', 'app-workspace', 'admin-login-page', 'profile-page', 'analytics-page'].forEach((id) => {
+            ['auth-page', 'setup-page', 'app-workspace', 'admin-login-page', 'profile-page', 'analytics-page', 'roadmap-page'].forEach((id) => {
                 const el = document.getElementById(id);
                 if (el) el.classList.add('hidden');
             });
@@ -487,7 +559,8 @@
                     (pageId === 'admin-login-page' && button.textContent.trim().toLowerCase() === 'admin') ||
                     (pageId === 'app-workspace' && button.textContent.trim().toLowerCase() === 'workspace') ||
                     (pageId === 'profile-page' && button.textContent.trim().toLowerCase() === 'profile') ||
-                    (pageId === 'analytics-page' && button.textContent.trim().toLowerCase() === 'analytics');
+                    (pageId === 'analytics-page' && button.textContent.trim().toLowerCase() === 'analytics') ||
+                    (pageId === 'roadmap-page' && button.textContent.trim().toLowerCase() === 'roadmap');
                 button.classList.toggle('active', shouldBeActive);
             });
 

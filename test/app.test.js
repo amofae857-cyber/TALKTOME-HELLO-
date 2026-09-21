@@ -46,7 +46,8 @@ test('all navigation targets resolve to accessible page sections', () => {
   const pageSections = [...html.matchAll(/<section[^>]*id="([^"]+)"/g)].map((match) => match[1]);
   const navigationTargets = [...html.matchAll(/showPage\('([^']+)'\)/g)].map((match) => match[1]);
 
-  assert.ok(pageSections.length >= 6);
+  assert.ok(pageSections.length >= 7);
+  assert.match(html, /id="roadmap-page"/);
   for (const target of new Set(navigationTargets)) {
     assert.ok(pageSections.includes(target), `Missing page section for navigation target: ${target}`);
   }
