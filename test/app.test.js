@@ -9,7 +9,7 @@ function startServer() {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [appPath], {
       cwd: path.join(__dirname, '..'),
-      env: { ...process.env, PORT: '3456' },
+      env: { ...process.env, PORT: '3456', RESET_DB: '1', NODE_ENV: 'test' },
       stdio: ['ignore', 'pipe', 'pipe']
     });
 

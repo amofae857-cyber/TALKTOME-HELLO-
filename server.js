@@ -12,6 +12,14 @@ const dbPath = path.join(dataDir, 'companion.db');
 
 fs.mkdirSync(dataDir, { recursive: true });
 
+if (process.env.RESET_DB === '1' || process.env.NODE_ENV === 'test') {
+  try {
+    fs.rmSync(dbPath, { force: true });
+  } catch (error) {
+    console.warn('Unable to reset database file:', error.message);
+  }
+}
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Database connection error:', err.message);
