@@ -10,7 +10,7 @@ function startServer() {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [appPath], {
       cwd: path.join(__dirname, '..'),
-      env: { ...process.env, PORT: '3456', RESET_DB: '1', NODE_ENV: 'test' },
+      env: { ...process.env, PORT: '3456', RESET_DB: '1', NODE_ENV: 'test', ADMIN_PASSWORD: 'test-admin-password' },
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
@@ -149,6 +149,30 @@ test('signup and export endpoints work for account flows', async () => {
 
     const unauthorizedResponse = await fetch('http://127.0.0.1:3456/api/analytics?userId=' + signupData.userId);
     assert.equal(unauthorizedResponse.status, 401);
+  } finally {
+    child.kill();
+  }
+});
+
+test('admin analytics requires server-side authentication', async () => {
+  const child = await startServer();
+  try {
+    const publicResponse = await fetch('http://127.0.0.1:3456/api/analytics');
+    assert.equal(publicResponse.status, 401);
+
+    const loginResponse = await fetch('http://127.0.0.1:3456/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'test-admin-password' })
+    });
+    const loginData = await loginResponse.json();
+    assert.equal(loginResponse.status, 200);
+    assert.ok(loginData.adminToken);
+
+    const dashboardResponse = await fetch('http://127.0.0.1:3456/api/analytics', {
+      headers: { Authorization: 'Bearer ' + loginData.adminToken }
+    });
+    assert.equal(dashboardResponse.status, 200);
   } finally {
     child.kill();
   }

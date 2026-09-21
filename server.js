@@ -15,6 +15,8 @@ const dataDir = isVercelRuntime
   : path.join(projectRoot, 'data');
 const dbPath = path.join(dataDir, 'companion.db');
 const authTokens = new Map();
+const adminTokens = new Set();
+const adminPassword = String(process.env.ADMIN_PASSWORD || '');
 
 fs.mkdirSync(dataDir, { recursive: true });
 
@@ -86,6 +88,16 @@ function requireUserAccess(req, requestedUserId) {
   if (!requestedUserId) return null;
   const authenticatedUserId = getAuthenticatedUserId(req);
   return authenticatedUserId === requestedUserId ? authenticatedUserId : null;
+}
+
+function getBearerToken(req) {
+  const header = String(req.get('authorization') || '');
+  return header.startsWith('Bearer ') ? header.slice(7) : '';
+}
+
+function requireAdminAccess(req) {
+  const token = getBearerToken(req);
+  return Boolean(token && adminTokens.has(token));
 }
 
 async function ensureColumnExists(tableName, columnName, columnDefinition) {
@@ -308,6 +320,20 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body || {};
+  if (!adminPassword) {
+    return res.status(503).json({ error: 'Administrative access is not configured.' });
+  }
+  if (!password || !crypto.timingSafeEqual(Buffer.from(String(password)), Buffer.from(adminPassword))) {
+    return res.status(401).json({ error: 'Invalid administrative password.' });
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  adminTokens.add(token);
+  res.json({ status: 'ok', adminToken: token });
+});
+
 app.post('/api/session', async (req, res) => {
   try {
     const { name, gender, stage, userId } = req.body || {};
@@ -428,6 +454,9 @@ app.post('/api/chat', async (req, res) => {
 app.get('/api/analytics', async (req, res) => {
   try {
     const userId = req.query.userId || null;
+    if (!userId && !requireAdminAccess(req)) {
+      return res.status(401).json({ error: 'Administrative authentication is required.' });
+    }
     if (userId && !requireUserAccess(req, userId)) {
       return res.status(401).json({ error: 'Account authentication is required.' });
     }
@@ -463,6 +492,9 @@ app.get('/api/analytics', async (req, res) => {
 app.get('/api/export', async (req, res) => {
   try {
     const userId = req.query.userId || null;
+    if (!userId) {
+      return res.status(401).json({ error: 'Account authentication is required for exports.' });
+    }
     if (userId && !requireUserAccess(req, userId)) {
       return res.status(401).json({ error: 'Account authentication is required.' });
     }

@@ -536,8 +536,8 @@
     </main>
 
     <script>
-        const MASTER_ADMIN_PASSWORD = 'SecurePartner2026!';
         let profile = { name: '', gender: '', stage: '', history: [], sessionId: null, userId: null, authToken: '', email: '', relationship: '' };
+        let adminToken = '';
         let liveAudioContext, webRtcConnection;
         let isCallActive = false;
 
@@ -795,13 +795,23 @@
             }
         }
 
-        function verifyAdminPassword() {
+        async function verifyAdminPassword() {
             const pass = document.getElementById('admin-pass').value;
-            if (pass === MASTER_ADMIN_PASSWORD) {
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pass })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to open administrative access.');
+                }
+                adminToken = data.adminToken;
                 document.getElementById('admin-pass').value = '';
                 showPage('analytics-page');
-            } else {
-                alert('Invalid administrative password confirmation code pattern.');
+            } catch (error) {
+                alert(error.message || 'Unable to open administrative access.');
                 document.getElementById('admin-pass').value = '';
             }
         }
@@ -812,10 +822,15 @@
 
         async function loadDashboardMetrics() {
             try {
-                const response = await fetch('/api/analytics' + (profile.userId ? '?userId=' + encodeURIComponent(profile.userId) : ''), {
-                    headers: profile.authToken ? { Authorization: `Bearer ${profile.authToken}` } : {}
+                const userQuery = profile.userId ? '?userId=' + encodeURIComponent(profile.userId) : '';
+                const token = adminToken || profile.authToken;
+                const response = await fetch('/api/analytics' + userQuery, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {}
                 });
                 const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load dashboard analytics.');
+                }
                 const totalChats = document.getElementById('metric-total-chats');
                 const feed = document.getElementById('admin-log-feed');
 
@@ -879,6 +894,10 @@
         }
 
         async function exportLogs(format) {
+            if (!profile.userId || !profile.authToken) {
+                alert('Sign in before exporting conversation logs.');
+                return;
+            }
             const userId = profile.userId || null;
             const params = new URLSearchParams({ format });
             if (userId) params.set('userId', userId);
