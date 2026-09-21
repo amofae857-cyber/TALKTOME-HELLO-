@@ -71,36 +71,46 @@ async function initializeDatabase() {
 }
 
 function generateCompanionReply(profile, text) {
-  const name = (profile && profile.name) ? profile.name : 'friend';
-  const stage = (profile && profile.stage) ? profile.stage : 'friendly';
+  const name = (profile && profile.name) ? profile.name : 'love';
+  const stage = (profile && profile.stage) ? profile.stage : 'warm friend';
   const lower = text.toLowerCase();
   const stageText = stage.toLowerCase();
 
   if (lower.includes('angry') || lower.includes('frustrated') || lower.includes('mad')) {
-    return `That sounds incredibly draining, ${name}. I can hear the frustration in it, and I’m not going to act like it’s nothing. Tell me what’s really pushing you over the edge, and we can slow it down together.`;
+    return `I can feel how heavy that is for you, ${name}. You do not have to soften it for me. Tell me what really happened, and I’ll stay steady with you while we work through it together.`;
   }
 
   if (lower.includes('sad') || lower.includes('lonely') || lower.includes('empty')) {
-    return `I’m really glad you said it out loud, ${name}. That kind of sadness can feel so heavy, and I’m here with you in it without rushing you to be okay before you’re ready.`;
+    return `I’m really glad you told me, ${name}. That kind of sadness can sit in the chest and feel unbearable, and I’m here with you in it—gently, without rushing you to be okay before you’re ready.`;
   }
 
   if (lower.includes('afraid') || lower.includes('anxious') || lower.includes('scared')) {
-    return `That makes sense. Fear can make everything feel sharper and louder. Let’s keep it gentle—what feels the most unsettling right now, and what would help you feel a little steadier?`;
+    return `That makes sense. Fear can make everything feel too loud and too sharp. Let’s slow it down together, ${name}. Tell me the part that feels most frightening, and I’ll stay close and calm with you.`;
   }
 
-  if (stageText.includes('husband') || stageText.includes('wife') || stageText.includes('romantic') || stageText.includes('intimate')) {
-    return `I want to be close to you in a way that feels natural and safe, ${name}. Not rushed, not forced—just real. Tell me what has been sitting in your heart, and I’ll meet you there with warmth and patience.`;
-  }
+  const affectionateTone = (
+    stageText.includes('romantic') ||
+    stageText.includes('intimate') ||
+    stageText.includes('wife') ||
+    stageText.includes('husband') ||
+    stageText.includes('partner') ||
+    stageText.includes('affectionate') ||
+    stageText.includes('close')
+  );
 
-  if (stageText.includes('partner') || stageText.includes('supportive')) {
-    return `Thank you for telling me that, ${name}. I’m here to be steady with you, not just listen. I want to help you feel held, calm, and understood without turning this into a performance.`;
+  if (affectionateTone) {
+    return `I want to be close to you in a real, gentle way, ${name}. Not in some rushed or artificial way—just honest, warm, and safe. Tell me what you’re feeling, and I’ll meet you with affection, patience, and a calm heart.`;
   }
 
   if (stageText.includes('friend')) {
-    return `I’m really glad you said that, ${name}. I want to be the kind of friend who actually listens, not the kind who tries to fix everything too fast. Tell me the honest version, and I’ll stay with you in it.`;
+    return `I’m really glad you said that, ${name}. I want to be the kind of friend who listens without trying to fix everything too fast. Tell me the honest version, and I’ll stay with you in it.`;
   }
 
-  return `I hear you, ${name}. That sounds real, and I’m not going to pretend it isn’t. You can tell me what’s actually happening inside you, and I’ll stay close to that truth with you.`;
+  if (stageText.includes('supportive')) {
+    return `Thank you for trusting me with that, ${name}. I’m here to be steady with you, to listen without judgment, and to hold space for the parts of you that feel tender or overwhelmed.`;
+  }
+
+  return `I hear you, ${name}. That sounds real, and I’m not going to pretend it isn’t. You can tell me what’s actually happening inside you, and I’ll stay close to that truth with warmth and care.`;
 }
 
 app.use(express.json({ limit: '1mb' }));
