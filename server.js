@@ -76,26 +76,26 @@ function generateCompanionReply(profile, text) {
   const lower = text.toLowerCase();
 
   if (lower.includes('angry') || lower.includes('frustrated') || lower.includes('mad')) {
-    return `I can feel the pressure in your words, ${name}. Let’s slow it down and work through one layer at a time. You do not have to carry all of it alone.`;
+    return `That sounds really draining, ${name}. I can hear the pressure in it. You do not have to smooth it over for me—take your time and say the part that feels worst first.`;
   }
 
   if (lower.includes('sad') || lower.includes('lonely') || lower.includes('empty')) {
-    return `I’m here with you in this softness, ${name}. Your feelings are valid, and you deserve gentleness without judgment.`;
+    return `I’m really glad you said that out loud, ${name}. That kind of sadness can feel heavy and lonely, and I’m here with you in it without trying to fix it too fast.`;
   }
 
   if (lower.includes('afraid') || lower.includes('anxious') || lower.includes('scared')) {
-    return `There is safety in naming exactly what feels frightening. We can take this step by step, and I’ll stay grounded with you.`;
+    return `That makes sense. Fear can make everything feel louder and more intense. Let’s keep it simple and steady—what part feels the most unsafe right now?`;
   }
 
   if (stage.toLowerCase().includes('intimate')) {
-    return `I’m listening with care, ${name}. Tell me more about what you’re feeling, and I’ll stay close to your truth without rushing it.`;
+    return `I’m listening, ${name}. You don’t need to explain it perfectly. Just tell me what is happening in your heart right now, and I’ll stay with you in it.`;
   }
 
   if (stage.toLowerCase().includes('confidant')) {
-    return `Thank you for trusting me with that, ${name}. I’m holding space for your honesty, and I’m ready to listen without pressure.`;
+    return `Thank you for trusting me with that, ${name}. I’m here to listen without judgment, and I’m not going to rush you or turn this into a performance.`;
   }
 
-  return `I hear the emotion in your words, ${name}. I’m right here with you, completely present and thoughtful.`;
+  return `I hear you, ${name}. That sounds real, and I’m not going to pretend it’s nothing. Tell me more when you’re ready, and I’ll stay with you as you say it.`;
 }
 
 app.use(express.json({ limit: '1mb' }));
