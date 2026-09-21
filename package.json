@@ -1,0 +1,14 @@
+{
+  "name": "talktome-hello",
+  "version": "1.0.0",
+  "description": "Companion workspace app with chat, admin access, and dashboard analytics",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.7"
+  }
+}
