@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "Companion workspace app with chat, admin access, and dashboard analytics",
   "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "build": "node --check server.js",
+    "build": "node scripts/build-check.js",
+    "vercel-build": "npm run build",
     "start": "node server.js",
     "test": "node --test"
   },
