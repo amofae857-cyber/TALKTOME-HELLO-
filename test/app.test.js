@@ -5,12 +5,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const appPath = path.join(__dirname, '..', 'server.js');
+const testPort = 34000 + (process.pid % 1000);
+const testBaseUrl = `http://127.0.0.1:${testPort}`;
 
 function startServer() {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [appPath], {
       cwd: path.join(__dirname, '..'),
-      env: { ...process.env, PORT: '3456', RESET_DB: '1', NODE_ENV: 'test', ADMIN_PASSWORD: 'test-admin-password' },
+      env: { ...process.env, PORT: String(testPort), RESET_DB: '1', NODE_ENV: 'test', ADMIN_PASSWORD: 'test-admin-password' },
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
@@ -56,7 +58,7 @@ test('all navigation targets resolve to accessible page sections', () => {
 test('server responds on health endpoint', async () => {
   const child = await startServer();
   try {
-    const response = await fetch('http://127.0.0.1:3456/api/health');
+    const response = await fetch(`${testBaseUrl}/api/health`);
     const data = await response.json();
     assert.equal(response.status, 200);
     assert.equal(data.ok, true);
@@ -69,7 +71,7 @@ test('server responds on health endpoint', async () => {
 test('chat endpoint accepts a session and stores a reply', async () => {
   const child = await startServer();
   try {
-    const sessionResponse = await fetch('http://127.0.0.1:3456/api/session', {
+    const sessionResponse = await fetch(`${testBaseUrl}/api/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Alex', gender: 'Gentle Woman', stage: 'Comforting Confidant' })
@@ -78,7 +80,7 @@ test('chat endpoint accepts a session and stores a reply', async () => {
     assert.equal(sessionResponse.status, 200);
     assert.ok(sessionData.sessionId);
 
-    const chatResponse = await fetch('http://127.0.0.1:3456/api/chat', {
+    const chatResponse = await fetch(`${testBaseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -98,7 +100,7 @@ test('chat endpoint accepts a session and stores a reply', async () => {
 test('signup and export endpoints work for account flows', async () => {
   const child = await startServer();
   try {
-    const signupResponse = await fetch('http://127.0.0.1:3456/api/signup', {
+    const signupResponse = await fetch(`${testBaseUrl}/api/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -113,7 +115,7 @@ test('signup and export endpoints work for account flows', async () => {
     assert.ok(signupData.userId);
     assert.ok(signupData.authToken);
 
-    const memoryResponse = await fetch('http://127.0.0.1:3456/api/chat', {
+    const memoryResponse = await fetch(`${testBaseUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -129,16 +131,16 @@ test('signup and export endpoints work for account flows', async () => {
     assert.equal(memoryResponse.status, 200);
     assert.ok(memoryData.reply.length > 0);
 
-    const exportResponse = await fetch('http://127.0.0.1:3456/api/export?format=json&userId=' + signupData.userId + '&authToken=' + signupData.authToken);
+    const exportResponse = await fetch(`${testBaseUrl}/api/export?format=json&userId=${signupData.userId}&authToken=${signupData.authToken}`);
     const exportData = await exportResponse.json();
     assert.equal(exportResponse.status, 200);
     assert.ok(Array.isArray(exportData.logs));
 
-    const csvResponse = await fetch('http://127.0.0.1:3456/api/export?format=csv&userId=' + signupData.userId + '&authToken=' + signupData.authToken);
+    const csvResponse = await fetch(`${testBaseUrl}/api/export?format=csv&userId=${signupData.userId}&authToken=${signupData.authToken}`);
     assert.equal(csvResponse.status, 200);
     assert.match(await csvResponse.text(), /id,role,content,created_at,session_id,user_id/);
 
-    const loginResponse = await fetch('http://127.0.0.1:3456/api/login', {
+    const loginResponse = await fetch(`${testBaseUrl}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'nina@example.com', password: 'secret123' })
@@ -148,7 +150,7 @@ test('signup and export endpoints work for account flows', async () => {
     assert.equal(loginData.userId, signupData.userId);
     assert.ok(loginData.authToken);
 
-    const unauthorizedResponse = await fetch('http://127.0.0.1:3456/api/analytics?userId=' + signupData.userId);
+    const unauthorizedResponse = await fetch(`${testBaseUrl}/api/analytics?userId=${signupData.userId}`);
     assert.equal(unauthorizedResponse.status, 401);
   } finally {
     child.kill();
@@ -158,17 +160,17 @@ test('signup and export endpoints work for account flows', async () => {
 test('admin analytics requires server-side authentication', async () => {
   const child = await startServer();
   try {
-    const publicResponse = await fetch('http://127.0.0.1:3456/api/analytics');
+    const publicResponse = await fetch(`${testBaseUrl}/api/analytics`);
     assert.equal(publicResponse.status, 401);
 
-    const invalidLoginResponse = await fetch('http://127.0.0.1:3456/api/admin/login', {
+    const invalidLoginResponse = await fetch(`${testBaseUrl}/api/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: 'wrong' })
     });
     assert.equal(invalidLoginResponse.status, 401);
 
-    const loginResponse = await fetch('http://127.0.0.1:3456/api/admin/login', {
+    const loginResponse = await fetch(`${testBaseUrl}/api/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: 'test-admin-password' })
@@ -177,7 +179,7 @@ test('admin analytics requires server-side authentication', async () => {
     assert.equal(loginResponse.status, 200);
     assert.ok(loginData.adminToken);
 
-    const dashboardResponse = await fetch('http://127.0.0.1:3456/api/analytics', {
+    const dashboardResponse = await fetch(`${testBaseUrl}/api/analytics`, {
       headers: { Authorization: 'Bearer ' + loginData.adminToken }
     });
     assert.equal(dashboardResponse.status, 200);
