@@ -540,23 +540,16 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(projectRoot, 'public', 'index.html'));
 });
 
-function listenOnPort(port, fallbackPort = null) {
+function listenOnPort(port) {
   const server = app.listen(port, () => {
     console.log(`Companion workspace running on http://localhost:${port}`);
   });
 
   server.on('error', async (error) => {
-    if (error.code === 'EADDRINUSE' && fallbackPort) {
-      console.warn(`Port ${port} is busy. Retrying on ${fallbackPort}.`);
-      await initializeDatabase();
-      listenOnPort(fallbackPort, null);
-      return;
-    }
-
-    if (error.code === 'EADDRINUSE' && port === DEFAULT_PORT) {
-      const nextPort = 3001;
+    if (error.code === 'EADDRINUSE') {
+      const nextPort = port + 1;
       console.warn(`Port ${DEFAULT_PORT} is busy. Retrying on ${nextPort}.`);
-      listenOnPort(nextPort, null);
+      listenOnPort(nextPort);
       return;
     }
 
@@ -567,7 +560,7 @@ function listenOnPort(port, fallbackPort = null) {
 async function startServer() {
   databaseReady = initializeDatabase();
   await databaseReady;
-  listenOnPort(PORT, PORT === DEFAULT_PORT ? 3001 : null);
+  listenOnPort(PORT);
 }
 
 if (!databaseReady) {
